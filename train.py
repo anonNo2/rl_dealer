@@ -14,7 +14,7 @@ tf.app.flags.DEFINE_integer("memory_size",200,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
 tf.app.flags.DEFINE_string("model_dir","model","")
 
-FLAGS = tf.app.flags.FLAGS
+FLAGS =  tf.app.flags.FLAGS
 
 # 利用主网络参数更新目标网络
 def updateTargetGraph(tfVars, tau):
