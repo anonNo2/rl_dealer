@@ -25,15 +25,16 @@ class env(gym.Env):
     def step(self, action=0):
         cur_price = self.data.iloc[self.t, :]['Close']
         reward = 0 #stay
+        profits = 0
+        for p in self.positions:
+            profits += (cur_price - p)
+
         if action== 1: #buy
             self.positions.append(cur_price)
         elif action == 2: # sell
             if len(self.positions) == 0:
                 reward = -1 #punished when no position on sell
             else:
-                profits = 0
-                for p in self.positions:
-                    profits += (cur_price - p)
                 reward += profits
                 self.profits += profits
                 self.positions = []

@@ -54,4 +54,4 @@ class evaluation():
                 total_loss.append(s_loss)
                 memory.clear()
 
-        print("eval:\t"+'\t'.join(map(str, ["reward:",total_reward,"loss", np.average(total_loss)])))
+        print("eval:\t"+'\t'.join(map(str, ["reward:",total_reward,"loss", np.average(total_loss),"porfits",self.env.profits])))
