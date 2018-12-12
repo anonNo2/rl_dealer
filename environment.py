@@ -4,6 +4,12 @@ import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import gym
 import tensorflow as tf
+#
+# def sigmoid(x):
+#     s = 1 / (1 + np.exp(-x))
+#     return s
+
+
 
 class env(gym.Env):
     def __init__(self,data,history_t = 90):
@@ -13,7 +19,7 @@ class env(gym.Env):
 
 
     def reset(self):
-        self.t = 0
+        self.t = self.history_t-1
         self.done = False
         self.profits = 0
         self.positions = []
@@ -21,20 +27,26 @@ class env(gym.Env):
         self.history = [0 for _ in range(self.history_t)]
         return [self.netPnL] + self.history # observation
 
+    def data_len(self):
+        return len(self.data)-1-self.history_t
+
     # action = 0: stay, 1: buy, 2: sell
     def step(self, action=0):
         cur_price = self.data.iloc[self.t, :]['Close']
         reward = 0 #stay
+        profits = 0
+        for p in self.positions:
+            profits += (cur_price - p)
+
         if action== 1: #buy
+            reward = -0.1
             self.positions.append(cur_price)
         elif action == 2: # sell
             if len(self.positions) == 0:
-                reward = -1 #punished when no position on sell
+                reward = -0.2 #punished when no position on sell
             else:
-                profits = 0
-                for p in self.positions:
-                    profits += (cur_price - p)
                 reward += profits
+                reward = np.tanh(reward/10.0)
                 self.profits += profits
                 self.positions = []
         # set next time
@@ -46,10 +58,10 @@ class env(gym.Env):
         self.history.pop(0)
         self.history.append(next_price - cur_price)
         # clipping reward
-        if reward > 0:
-            reward = 1
-        elif reward < 0:
-            reward = -1
+        # if reward > 0:
+        #     reward = 1
+        # elif reward < 0:
+        #     reward = -1
 
         # 每个S 是当前的利润和之前历史差价的数组
         return [self.netPnL] + self.history, reward, self.done # obs, reward, done

@@ -9,7 +9,7 @@ from environment import get_env, Experience
 from evaluate import evaluation
 from network import model
 
-tf.app.flags.DEFINE_integer("history_size",90,"")
+tf.app.flags.DEFINE_integer("history_size",35,"")
 tf.app.flags.DEFINE_string("data_path","data/Stocks/goog.us.txt","")
 tf.app.flags.DEFINE_integer("epoch_num",100,"")
 tf.app.flags.DEFINE_integer("memory_size",200,"")
@@ -75,7 +75,7 @@ def run_epch(params,sess,total_step):
         s = s_next
         step += 1
         total_step += 1
-    return np.average(total_loss),total_reward,total_step
+    return np.average(total_loss),total_reward,total_step,params.environment.profits
 
 
 def main(_):
@@ -83,7 +83,7 @@ def main(_):
     FLAGS.environment  = get_env(FLAGS)
     FLAGS.act = action()
 
-    FLAGS.step_max = len(FLAGS.environment.data)-1
+    FLAGS.step_max = FLAGS.environment.data_len()
     FLAGS.train_freq = 10
     FLAGS.update_q_freq = 20
     FLAGS.gamma = 0.97
@@ -106,10 +106,9 @@ def main(_):
             print('Loading Model...')
             saver.restore(sess,ckpt.model_checkpoint_path)
         total_step = 1
-        total_rewards = []
-        total_losses = []
+        print('\t'.join(map(str, ["epoch", "epsilon", "total_step", "rewardPerEpoch", "profits", "lossPerBatch", "elapsed_time"])))
         for epoch in range(FLAGS.epoch_num):
-            avg_loss_per_batch,total_reward,total_step = run_epch(FLAGS,sess,total_step)
+            avg_loss_per_batch,total_reward,total_step,profits = run_epch(FLAGS,sess,total_step)
             # total_rewards.append(total_reward)
             # total_losses.append(total_loss)
 
@@ -118,7 +117,7 @@ def main(_):
                 # log_loss = sum(total_losses[((epoch+1)-FLAGS.show_log_freq):])/FLAGS.show_log_freq
                 elapsed_time = time.time()-start
                 #print('\t'.join(map(str, [epoch+1, FLAGS.act.epsilon, total_step, log_reward, log_loss, elapsed_time])))
-                print('\t'.join(map(str, [epoch+1, FLAGS.act.epsilon, total_step, total_reward, avg_loss_per_batch, elapsed_time])))
+                print('\t'.join(map(str, [epoch+1, FLAGS.act.epsilon, total_step, total_reward, profits, avg_loss_per_batch, elapsed_time])))
                 start = time.time()
 
                 saver.save(sess,FLAGS.model_dir+'\model-'+str(epoch+1)+'.ckpt')

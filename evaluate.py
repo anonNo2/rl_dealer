@@ -21,7 +21,9 @@ class evaluation():
         total_loss =[]
         #print ("eval env length is {}".format(len(self.env.data)))
         memory = []
-        while step <( len(self.env.data)-1):
+        reward_list = []
+        max_steps = self.env.data_len()
+        while step <max_steps:
             s = (np.array(s, dtype=np.float32).reshape(1, -1))
             a, =sess.run([params.agent.A_main],{params.agent.main_input:s})
             a=a[0]
@@ -29,6 +31,12 @@ class evaluation():
             memory.append((s,a,r,s_next,done))
             # next step
             total_reward += r
+            cmd = "stay"
+            if a==1:
+                cmd = "buy"
+            elif a==2:
+                cmd = "sell"
+            reward_list.append(cmd+":{}".format(r))
             s = s_next
             step += 1
             if len(memory) < 50:
@@ -54,4 +62,5 @@ class evaluation():
                 total_loss.append(s_loss)
                 memory.clear()
 
-        print("eval:\t"+'\t'.join(map(str, ["reward:",total_reward,"loss", np.average(total_loss)])))
+        print("eval:\t"+'\t'.join(map(str, ["reward:",total_reward,"loss", np.average(total_loss),"porfits",self.env.profits])))
+        print ("reward history is {}".format(reward_list))
