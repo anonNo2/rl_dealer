@@ -9,7 +9,7 @@ from environment import get_env, Experience
 from evaluate import evaluation
 from network import model
 
-tf.app.flags.DEFINE_integer("history_size",90,"")
+tf.app.flags.DEFINE_integer("history_size",35,"")
 tf.app.flags.DEFINE_string("data_path","data/Stocks/goog.us.txt","")
 tf.app.flags.DEFINE_integer("epoch_num",100,"")
 tf.app.flags.DEFINE_integer("memory_size",200,"")
@@ -83,7 +83,7 @@ def main(_):
     FLAGS.environment  = get_env(FLAGS)
     FLAGS.act = action()
 
-    FLAGS.step_max = len(FLAGS.environment.data)-1
+    FLAGS.step_max = FLAGS.environment.data_len()
     FLAGS.train_freq = 10
     FLAGS.update_q_freq = 20
     FLAGS.gamma = 0.97

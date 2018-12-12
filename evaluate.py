@@ -22,7 +22,8 @@ class evaluation():
         #print ("eval env length is {}".format(len(self.env.data)))
         memory = []
         reward_list = []
-        while step <( len(self.env.data)-1):
+        max_steps = self.env.data_len()
+        while step <max_steps:
             s = (np.array(s, dtype=np.float32).reshape(1, -1))
             a, =sess.run([params.agent.A_main],{params.agent.main_input:s})
             a=a[0]

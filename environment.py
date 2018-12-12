@@ -19,13 +19,16 @@ class env(gym.Env):
 
 
     def reset(self):
-        self.t = 0
+        self.t = self.history_t-1
         self.done = False
         self.profits = 0
         self.positions = []
         self.netPnL = 0
         self.history = [0 for _ in range(self.history_t)]
         return [self.netPnL] + self.history # observation
+
+    def data_len(self):
+        return len(self.data)-1-self.history_t
 
     # action = 0: stay, 1: buy, 2: sell
     def step(self, action=0):
@@ -36,7 +39,7 @@ class env(gym.Env):
             profits += (cur_price - p)
 
         if action== 1: #buy
-            reward = 0
+            reward = -0.1
             self.positions.append(cur_price)
         elif action == 2: # sell
             if len(self.positions) == 0:
