@@ -41,7 +41,7 @@ class QNetwork(Layer):
 
         td_error = tf.square(self.targetQ - inference_value)
         loss = tf.reduce_mean(td_error)
-        optimizer = tf.train.AdamOptimizer()
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         updateModel = optimizer.minimize(loss)
 
         return updateModel,loss,Q_value,greedy_action
