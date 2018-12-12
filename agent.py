@@ -3,6 +3,7 @@ from tensorflow.contrib.layers import xavier_initializer
 from tensorflow.python.layers.base import Layer
 from tensorflow.python.layers.core import Dense
 import numpy as np
+from tensorflow.python.training import training_util
 
 
 class QNetwork(Layer):
@@ -15,6 +16,8 @@ class QNetwork(Layer):
         self.action_space_size = action_space_size
         self.targetQ = tf.placeholder(shape=[None], dtype=tf.float32)
         self.action = tf.placeholder(shape = [None],dtype=tf.int32)
+        self.step = tf.placeholder(shape=[],dtype=tf.int32)
+        self.scalar_step = 0
 
     def build(self, _):
         half_hidden_size = self.hidden_size//2
@@ -41,7 +44,12 @@ class QNetwork(Layer):
 
         td_error = tf.square(self.targetQ - inference_value)
         loss = tf.reduce_mean(td_error)
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+
+
+        lr = tf.minimum(0.001, 0.001 / tf.log(999.) * tf.log(tf.cast(self.step, tf.float32) + 1))
+        optimizer = tf.train.AdamOptimizer(learning_rate = lr, beta1 = 0.8, beta2 = 0.999, epsilon = 1e-7)
+
+        #optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         updateModel = optimizer.minimize(loss)
 
         return updateModel,loss,Q_value,greedy_action

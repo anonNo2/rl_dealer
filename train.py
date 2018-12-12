@@ -10,6 +10,7 @@ from evaluate import evaluation
 from network import model
 
 tf.app.flags.DEFINE_integer("history_size",35,"")
+#goog.us.txt
 tf.app.flags.DEFINE_string("data_path","data/Stocks/goog.us.txt","")
 tf.app.flags.DEFINE_integer("epoch_num",100,"")
 tf.app.flags.DEFINE_integer("memory_size",200,"")
@@ -61,11 +62,12 @@ def run_epch(params,sess,total_step):
                 q_object, = sess.run([params.agent.Q_object],{params.agent.object_input:s_next_batch})
                 q_object = params.gamma*q_object[range(params.batch_size),a_main]*( done_batch)
                 doubleQvalue = reward_batch+q_object
-
+                params.agent.main_network.scalar_step+=1
                 _,s_loss = sess.run([params.agent.updateModel,params.agent.loss]
                                     ,{params.agent.main_network.targetQ:doubleQvalue
                                      ,params.agent.main_input:s_batch
-                                      ,params.agent.main_network.action:a_batch}
+                                      ,params.agent.main_network.action:a_batch
+                                      ,params.agent.main_network.step:params.agent.main_network.scalar_step}
                                     )
                 total_loss.append(s_loss)
         if total_step % params.update_q_freq == 0 and step>FLAGS.memory_size: #更新从Q参数

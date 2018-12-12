@@ -23,9 +23,9 @@ class env(gym.Env):
         self.done = False
         self.profits = 0
         self.positions = []
-        self.netPnL = 0
+        self.netPnL = [0,4,0]
         self.history = [0 for _ in range(self.history_t)]
-        return [self.netPnL] + self.history # observation
+        return self.netPnL + self.history # observation
 
     def data_len(self):
         return len(self.data)-1-self.history_t
@@ -34,29 +34,44 @@ class env(gym.Env):
     def step(self, action=0):
         cur_price = self.data.iloc[self.t, :]['Close']
         reward = 0 #stay
-        profits = 0
-        for p in self.positions:
-            profits += (cur_price - p)
+        # profits = 0
+        # for p in self.positions:
+        #     profits += (cur_price - p)
 
         if action== 1: #buy
-            reward = -0.1
-            self.positions.append(cur_price)
+            if len(self.positions) >=4:
+                reward = -0.3
+            else:
+                self.positions.append(cur_price)
+                avg = np.average(self.positions)
+                for i in range(len(self.positions)):
+                    self.positions[i] = avg
+                reward = -0.05*len(self.positions)
         elif action == 2: # sell
             if len(self.positions) == 0:
                 reward = -0.2 #punished when no position on sell
             else:
-                reward += profits
-                reward = np.tanh(reward/10.0)
-                self.profits += profits
-                self.positions = []
+                profit = (cur_price/(self.positions.pop(0))-1)*100
+                reward = np.tanh(profit/2)
+                self.profits += profit
         # set next time
         self.t += 1
         next_price = self.data.iloc[self.t, :]['Close']
-        self.netPnL = 0
-        for p in self.positions:
-            self.netPnL += (next_price - p)
         self.history.pop(0)
-        self.history.append(next_price - cur_price)
+        self.history.append((next_price /cur_price-1)*100)
+
+        # positions = []
+        # #netPnL
+        # for p in self.positions:
+        #     positions.append(next_price - p)
+        # for _ in range(4-len(positions)):
+        #     positions.append(0)
+        self.netPnL = 0
+        if len(self.positions)>0:
+            self.netPnL = (next_price/np.average(self.positions)-1)*100
+        # for p in self.positions:
+        #     self.netPnL += (next_price - p)
+
         # clipping reward
         # if reward > 0:
         #     reward = 1
@@ -64,7 +79,7 @@ class env(gym.Env):
         #     reward = -1
 
         # 每个S 是当前的利润和之前历史差价的数组
-        return [self.netPnL] + self.history, reward, self.done # obs, reward, done
+        return [len(self.positions),4-len(self.positions),self.netPnL] + self.history, reward, self.done # obs, reward, done
 
 def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
     data = pd.read_csv(params.data_path)
