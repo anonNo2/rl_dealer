@@ -4,6 +4,11 @@ import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import gym
 import tensorflow as tf
+
+from plotly import tools
+from plotly.graph_objs import *
+from plotly.offline import init_notebook_mode, iplot, iplot_mpl
+init_notebook_mode()
 #
 # def sigmoid(x):
 #     s = 1 / (1 + np.exp(-x))
@@ -34,22 +39,18 @@ class env(gym.Env):
     def step(self, action=0):
         cur_price = self.data.iloc[self.t, :]['Close']
         reward = 0 #stay
-        # profits = 0
-        # for p in self.positions:
-        #     profits += (cur_price - p)
-
         if action== 1: #buy
             if len(self.positions) >=4:
-                reward = -0.3
+                reward = -0.1
             else:
                 self.positions.append(cur_price)
                 avg = np.average(self.positions)
                 for i in range(len(self.positions)):
                     self.positions[i] = avg
-                reward = -0.05*len(self.positions)
+                reward = -0.05
         elif action == 2: # sell
             if len(self.positions) == 0:
-                reward = -0.2 #punished when no position on sell
+                reward = -0.1 #punished when no position on sell
             else:
                 profit = (cur_price/(self.positions.pop(0))-1)*100
                 reward = np.tanh(profit/2)
@@ -60,23 +61,9 @@ class env(gym.Env):
         self.history.pop(0)
         self.history.append((next_price /cur_price-1)*100)
 
-        # positions = []
-        # #netPnL
-        # for p in self.positions:
-        #     positions.append(next_price - p)
-        # for _ in range(4-len(positions)):
-        #     positions.append(0)
         self.netPnL = 0
         if len(self.positions)>0:
             self.netPnL = (next_price/np.average(self.positions)-1)*100
-        # for p in self.positions:
-        #     self.netPnL += (next_price - p)
-
-        # clipping reward
-        # if reward > 0:
-        #     reward = 1
-        # elif reward < 0:
-        #     reward = -1
 
         # 每个S 是当前的利润和之前历史差价的数组
         return [len(self.positions),4-len(self.positions),self.netPnL] + self.history, reward, self.done # obs, reward, done
@@ -94,6 +81,25 @@ def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
         return env(train,params.history_size)
     else:
         return env(test,params.history_size)
+
+
+#import matplotlib.pyplot as plt
+def main(_):
+    data = pd.read_csv("data/Stocks/goog.us.txt")
+    data['Date'] = pd.to_datetime(data['Date'])
+    data = data.set_index('Date')
+    print(data.index.min(), data.index.max())
+    data.head()
+    date_split = '2016-01-01'
+    train = data[:date_split]
+    test = data[date_split:]
+
+    cur_price = test.iloc[range(0,100), :]['Close']
+    #plt.plot(cur_price)
+
+
+if __name__=="__main__":
+    tf.app.run(main)
 
 
 

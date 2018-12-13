@@ -13,26 +13,25 @@ tf.app.flags.DEFINE_integer("history_size",35,"")
 #goog.us.txt
 tf.app.flags.DEFINE_string("data_path","data/Stocks/goog.us.txt","")
 tf.app.flags.DEFINE_integer("epoch_num",100,"")
-tf.app.flags.DEFINE_integer("memory_size",200,"")
+tf.app.flags.DEFINE_integer("memory_size",100,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
 tf.app.flags.DEFINE_string("model_dir","model","")
 
 FLAGS =  tf.app.flags.FLAGS
 
 # 利用主网络参数更新目标网络
-def updateTargetGraph(tfVars, tau):
+def updateTargetGraph(tfVars, tau=0.01):
     half_len = len(tfVars)//2
     op_holder = []
     for idx, var in enumerate(tfVars[0: half_len]):
-        #op_holder.append(tfVars[idx+total_vars//2].assign((var.value()*tau) + ((1-tau)*tfVars[idx+total_vars//2].value())))
-        op_holder.append(tfVars[idx+half_len].assign(var.value()))
+        op_holder.append(tfVars[idx+half_len].assign((var.value()*tau) + ((1-tau)*tfVars[idx+half_len].value())))
+        #op_holder.append(tfVars[idx+half_len].assign(var.value()))
     return op_holder
 
 def updateTarget(sess):
-    op_holder = updateTargetGraph(tf.trainable_variables(),0)
+    op_holder = updateTargetGraph(tf.trainable_variables(),0.003)
     for op in op_holder:
         sess.run(op)
-
 
 def run_epch(params,sess,total_step):
     s = params.environment.reset()
@@ -45,7 +44,7 @@ def run_epch(params,sess,total_step):
         a = params.act.get_action(total_step,a[0])
         s_next,r,done = params.environment.step(a)
         params.memory.append((s,a,r,s_next,done))
-        if len(params.memory) > params.memory_size:
+        while len(params.memory) > params.memory_size:
             params.memory.pop(0)
         if total_step % params.train_freq == 0 and step>params.memory_size:
             shuffled_memory = np.random.permutation(params.memory)
@@ -86,8 +85,8 @@ def main(_):
     FLAGS.act = action()
 
     FLAGS.step_max = FLAGS.environment.data_len()
-    FLAGS.train_freq = 10
-    FLAGS.update_q_freq = 20
+    FLAGS.train_freq = 40
+    FLAGS.update_q_freq = 50
     FLAGS.gamma = 0.97
     FLAGS.show_log_freq = 5
     FLAGS.memory = []#Experience(FLAGS.memory_size)
