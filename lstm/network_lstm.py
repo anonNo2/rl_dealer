@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from agent import QNetwork, QLstmNetwork
+from lstm.agent import QLstmNetwork
 
 
 class model():

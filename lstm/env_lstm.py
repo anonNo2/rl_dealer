@@ -40,6 +40,13 @@ class LstmEnv(gym.Env):
     def data_len(self):
         return len(self.data)-1
 
+    def select(self,a):
+        if(len(self.positions)==0):
+            a[2] = -1000
+        elif(len(self.positions)>=4):
+            a[1] = -1000
+        return np.argmax(a)
+
     # action = 0: stay, 1: buy, 2: sell
     def step(self, action=0):
         cur_price = self.data.iloc[self.t, :]['Close']

@@ -4,7 +4,7 @@ import time
 import tensorflow as tf
 import numpy as np
 
-from agent import  action
+from lstm.agent import action
 from lstm.env_lstm import get_env
 from lstm.evaluate_lstm import evaluation
 from lstm.network_lstm import model
@@ -29,7 +29,7 @@ def updateTargetGraph(tfVars, tau=0.01):
     return op_holder
 
 def updateTarget(sess):
-    op_holder = updateTargetGraph(tf.trainable_variables(),0.003)
+    op_holder = updateTargetGraph(tf.trainable_variables(),0.001)
     for op in op_holder:
         sess.run(op)
 
@@ -41,8 +41,8 @@ def run_epch(params,sess,total_step):
     while step < params.step_max:
         head_reshape = (np.array(head, dtype=np.float32).reshape(1, -1))
         history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,5))
-        a, =sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
-        a = params.act.get_action(total_step,a[0])
+        a, =sess.run([params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+        a = params.act.get_action(total_step,a[0],params.environment)
         s_next_head,s_next_history,r,done = params.environment.step(a)
         params.memory.append((head,history,a,r,s_next_head,s_next_history,done))
         while len(params.memory) > params.memory_size:

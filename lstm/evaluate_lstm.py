@@ -23,8 +23,8 @@ class evaluation():
         while step <max_steps-1:
             head_reshape = (np.array(head, dtype=np.float32).reshape(1, -1))
             history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,5))
-            a, =sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
-            a=a[0]
+            a, =sess.run([params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+            a = self.env.select(a[0])
             s_next_head,s_next_history,r,done = self.env.step(a)
             memory.append((head,history,a,r,s_next_head,s_next_history,done))
             # next step
