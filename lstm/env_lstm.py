@@ -16,6 +16,7 @@ class LstmEnv(gym.Env):
         self.data = data
         self.history_t = history_t
         self.reset()
+        self.curent_price =0
 
 
     def reset(self):
@@ -41,6 +42,7 @@ class LstmEnv(gym.Env):
         return len(self.data)-1
 
     def select(self,a):
+        self.curent_price = self.data.iloc[self.t, :]['Close']
         if(len(self.positions)==0):
             a[2] = -1000
         elif(len(self.positions)>=4):
@@ -66,7 +68,8 @@ class LstmEnv(gym.Env):
                 reward = -0.1 #punished when no position on sell
             else:
                 profit = (cur_price/(self.positions.pop(0))-1)*100
-                reward = np.tanh(profit/2)
+                reward = np.tanh(profit/5)
+                #reward = profit
                 self.profits += profit
         # set next time
         self.t += 1

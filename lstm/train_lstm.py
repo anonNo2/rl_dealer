@@ -1,6 +1,7 @@
 import os
 import time
-
+import sys
+sys.path.insert(0, "D:\\github projects\\linsu07\\rl_dealer\\")
 import tensorflow as tf
 import numpy as np
 
@@ -128,7 +129,7 @@ def main(_):
                 start = time.time()
 
                 saver.save(sess,FLAGS.model_dir+'\model-'+str(epoch+1)+'.ckpt')
-                eval.eval()
+                eval.eval_pic()
 
 
 

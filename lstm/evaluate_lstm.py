@@ -2,12 +2,53 @@ import tensorflow as tf
 
 from lstm.env_lstm import get_env
 import numpy as np
+import matplotlib.pyplot as plt
 
 class evaluation():
     def __init__(self,params,sess):
         self.env = get_env(params,tf.estimator.ModeKeys.EVAL)
         self.params = params
         self.sess = sess
+
+    def eval_pic(self):
+        params = self.params
+        sess = self.sess
+        head,history = self.env.reset()
+        max_steps = self.env.data_len()
+        step = 0
+        buy_step_list =[]
+        buy_list = []
+        sell_step_list = []
+        sell_list = []
+        stay_step_list = []
+        stay_list = []
+        total_reward = 0
+        while step <max_steps-1:
+            head_reshape = (np.array(head, dtype=np.float32).reshape(1, -1))
+            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,5))
+            a, =sess.run([params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+            a = self.env.select(a[0])
+            cur_price = self.env.curent_price
+            s_next_head,s_next_history,r,done = self.env.step(a)
+            total_reward += r
+            if a==1:
+                buy_step_list.append(step)
+                buy_list.append(cur_price)
+            elif a==2:
+                sell_step_list.append(step)
+                sell_list.append(cur_price)
+
+            stay_step_list.append(step)
+            stay_list.append(cur_price)
+            head = s_next_head
+            history = s_next_history
+            step += 1
+        stay_style = "b-"
+        buy_style = "go"
+        sell_stype = "ro"
+        plt.plot(stay_step_list,stay_list,stay_style,buy_step_list,buy_list,buy_style,sell_step_list,sell_list,sell_stype)
+        print("eval:\t"+'\t'.join(map(str, ["reward:",total_reward,"porfits",self.env.profits])))
+        plt.show()
 
     def eval(self):
         params = self.params
@@ -68,4 +109,4 @@ class evaluation():
                 memory.clear()
 
         print("eval:\t"+'\t'.join(map(str, ["reward:",total_reward,"loss", np.average(total_loss),"porfits",self.env.profits])))
-        print ("reward history is {}".format(reward_list))
+        #print ("reward history is {}".format(reward_list))
