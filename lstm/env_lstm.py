@@ -17,6 +17,8 @@ class LstmEnv(gym.Env):
         self.history_t = history_t
         self.reset()
         self.curent_price =0
+        self.lastSell = 0
+        self.lastbuy = 0
 
 
     def reset(self):
@@ -43,11 +45,20 @@ class LstmEnv(gym.Env):
 
     def select(self,a):
         self.curent_price = self.data.iloc[self.t, :]['Close']
-        if(len(self.positions)==0):
+        if(self.lastSell>0):
+            self.lastSell-=1
+        if(self.lastbuy>0):
+            self.lastbuy-=1
+        if(len(self.positions)==0) or self.lastbuy>0:
             a[2] = -1000
-        elif(len(self.positions)>=4):
+        if(len(self.positions)>=4) or self.lastSell>0 :
             a[1] = -1000
-        return np.argmax(a)
+        sel = np.argmax(a)
+        if(sel==2):#sell
+            self.lastSell = 15 # can not buy with 15day
+        if(sel==1):#buy
+            self.lastbuy = 15 # can not sell with 15day
+        return sel
 
     # action = 0: stay, 1: buy, 2: sell
     def step(self, action=0):
@@ -68,7 +79,7 @@ class LstmEnv(gym.Env):
                 reward = -0.1 #punished when no position on sell
             else:
                 profit = (cur_price/(self.positions.pop(0))-1)*100
-                reward = np.tanh(profit/5)
+                reward = np.tanh(profit/12)
                 #reward = profit
                 self.profits += profit
         # set next time
@@ -100,7 +111,7 @@ def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
     data = data.set_index('Date')
     print(data.index.min(), data.index.max())
     data.head()
-    date_split = '2016-01-01'
+    date_split = '2014-01-01'
     train = data[:date_split]
     test = data[date_split:]
     if(mode == tf.estimator.ModeKeys.TRAIN):

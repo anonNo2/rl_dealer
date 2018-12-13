@@ -12,7 +12,7 @@ from lstm.network_lstm import model
 
 tf.app.flags.DEFINE_integer("history_size",35,"")
 #goog.us.txt
-tf.app.flags.DEFINE_string("data_path","data/Stocks/goog.us.txt","")
+tf.app.flags.DEFINE_string("data_path","data/Stocks/msfg.us.txt","")
 tf.app.flags.DEFINE_integer("epoch_num",100,"")
 tf.app.flags.DEFINE_integer("memory_size",100,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
@@ -92,10 +92,10 @@ def main(_):
     FLAGS.act = action()
 
     FLAGS.step_max = FLAGS.environment.data_len()
-    FLAGS.train_freq = 40
-    FLAGS.update_q_freq = 50
+    FLAGS.train_freq = 80
+    FLAGS.update_q_freq = 100
     FLAGS.gamma = 0.97
-    FLAGS.show_log_freq = 5
+    FLAGS.show_log_freq = 3
     FLAGS.memory = []#Experience(FLAGS.memory_size)
 
     init = tf.global_variables_initializer()
