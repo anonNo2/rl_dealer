@@ -5,18 +5,13 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import gym
 import tensorflow as tf
 
-from plotly import tools
-from plotly.graph_objs import *
-from plotly.offline import init_notebook_mode, iplot, iplot_mpl
-init_notebook_mode()
+
 #
 # def sigmoid(x):
 #     s = 1 / (1 + np.exp(-x))
 #     return s
 
-
-
-class env(gym.Env):
+class LstmEnv(gym.Env):
     def __init__(self,data,history_t = 90):
         self.data = data
         self.history_t = history_t
@@ -26,18 +21,36 @@ class env(gym.Env):
     def reset(self):
         self.t = 0
         self.done = False
-        self.profits = 0
+
         self.positions = []
         self.netPnL = [0,4,0]
-        self.history = [0 for _ in range(self.history_t)]
-        return self.netPnL + self.history # observation
+
+        self.profits = 0
+
+        self.cur_start = 0
+        self.cur_high = 0
+        self.cur_low = 0
+        self.cur_end = 0
+        self.volume = 0
+        # 5 features
+        zero_day = [self.cur_start,self.cur_high,self.cur_low,self.cur_end,self.volume]
+        self.history = [zero_day for _ in range(self.history_t)]
+        return self.netPnL, self.history # observation
 
     def data_len(self):
         return len(self.data)-1
 
+    def select(self,a):
+        if(len(self.positions)==0):
+            a[2] = -1000
+        elif(len(self.positions)>=4):
+            a[1] = -1000
+        return np.argmax(a)
+
     # action = 0: stay, 1: buy, 2: sell
     def step(self, action=0):
         cur_price = self.data.iloc[self.t, :]['Close']
+        cur_volume = self.data.iloc[self.t,:] ['Volume']
         reward = 0 #stay
         if action== 1: #buy
             if len(self.positions) >=4:
@@ -57,16 +70,26 @@ class env(gym.Env):
                 self.profits += profit
         # set next time
         self.t += 1
-        next_price = self.data.iloc[self.t, :]['Close']
+        next_close = self.data.iloc[self.t, :]['Close']
+        next_open = self.data.iloc[self.t, :]['Open']
+        next_High = self.data.iloc[self.t, :]['High']
+        next_Low = self.data.iloc[self.t, :]['Low']
+        next_Volume = self.data.iloc[self.t, :]['Volume']
         self.history.pop(0)
-        self.history.append((next_price /cur_price-1)*100)
-
+        cur_day = [
+            (next_open /cur_price-1)*100,
+            (next_High /cur_price-1)*100,
+            (next_Low /cur_price-1)*100,
+            (next_close /cur_price-1)*100,
+            (next_Volume/cur_volume-1)
+            ]
+        self.history.append(cur_day)
         self.netPnL = 0
         if len(self.positions)>0:
-            self.netPnL = (next_price/np.average(self.positions)-1)*100
+            self.netPnL = (next_close/np.average(self.positions)-1)*100
 
         # 每个S 是当前的利润和之前历史差价的数组
-        return [len(self.positions),4-len(self.positions),self.netPnL] + self.history, reward, self.done # obs, reward, done
+        return [len(self.positions),4-len(self.positions),self.netPnL] ,self.history, reward, self.done # obs, reward, done
 
 def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
     data = pd.read_csv(params.data_path)
@@ -78,9 +101,9 @@ def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
     train = data[:date_split]
     test = data[date_split:]
     if(mode == tf.estimator.ModeKeys.TRAIN):
-        return env(train,params.history_size)
+        return LstmEnv(train,params.history_size)
     else:
-        return env(test,params.history_size)
+        return LstmEnv(test,params.history_size)
 
 
 #import matplotlib.pyplot as plt

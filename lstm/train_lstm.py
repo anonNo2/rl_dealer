@@ -4,10 +4,10 @@ import time
 import tensorflow as tf
 import numpy as np
 
-from agent import QNetwork, action
-from environment import get_env, Experience
-from evaluate import evaluation
-from network import model
+from lstm.agent import action
+from lstm.env_lstm import get_env
+from lstm.evaluate_lstm import evaluation
+from lstm.network_lstm import model
 
 tf.app.flags.DEFINE_integer("history_size",35,"")
 #goog.us.txt
@@ -29,51 +29,57 @@ def updateTargetGraph(tfVars, tau=0.01):
     return op_holder
 
 def updateTarget(sess):
-    op_holder = updateTargetGraph(tf.trainable_variables(),0.003)
+    op_holder = updateTargetGraph(tf.trainable_variables(),0.001)
     for op in op_holder:
         sess.run(op)
 
 def run_epch(params,sess,total_step):
-    s = params.environment.reset()
+    head,history = params.environment.reset()
     step = 0
     total_reward = 0
     total_loss =[]
     while step < params.step_max:
-        s = (np.array(s, dtype=np.float32).reshape(1, -1))
-        a, =sess.run([params.agent.A_main],{params.agent.main_input:s})
-        a = params.act.get_action(total_step,a[0])
-        s_next,r,done = params.environment.step(a)
-        params.memory.append((s,a,r,s_next,done))
+        head_reshape = (np.array(head, dtype=np.float32).reshape(1, -1))
+        history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,5))
+        a, =sess.run([params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+        a = params.act.get_action(total_step,a[0],params.environment)
+        s_next_head,s_next_history,r,done = params.environment.step(a)
+        params.memory.append((head,history,a,r,s_next_head,s_next_history,done))
         while len(params.memory) > params.memory_size:
             params.memory.pop(0)
-        if total_step % params.train_freq == 0 and step>params.memory_size:
+        if total_step % params.train_freq == 0 and step>params.memory_size+params.history_size:
             shuffled_memory = np.random.permutation(params.memory)
             memory_idx = range(len(shuffled_memory))
             for i in memory_idx[::FLAGS.batch_size]:
                 batch = np.array(shuffled_memory[i:i+params.batch_size])
-                s_batch = np.array(batch[:, 0].tolist(), dtype=np.float32).reshape(params.batch_size, -1)
-                a_batch = np.array(batch[:, 1].tolist(), dtype=np.int32)
-                reward_batch = np.array(batch[:, 2].tolist(), dtype=np.int32)
-                s_next_batch = np.array(batch[:, 3].tolist(), dtype=np.float32).reshape(params.batch_size, -1)
-                done_batch =1- np.array(batch[:, 4].tolist(), dtype=np.int32)
+                s_batch_head =np.array( batch[:, 0].tolist(), dtype=np.float32)
+                s_batch_history = np.array( batch[:, 1].tolist(), dtype=np.float32)
+                a_batch = np.array(batch[:, 2].tolist(), dtype=np.int32)
+                reward_batch = np.array(batch[:, 3].tolist(), dtype=np.int32)
+                s_next_batch_head = np.array(batch[:, 4].tolist(), dtype=np.float32)#.reshape(params.batch_size, -1)
+                s_next_batch_history = np.array(batch[:, 5].tolist(), dtype=np.float32)
+                done_batch =1- np.array(batch[:, 6].tolist(), dtype=np.int32)
 
-                a_main, = sess.run([params.agent.A_main],{params.agent.main_input:s_next_batch})
-                q_object, = sess.run([params.agent.Q_object],{params.agent.object_input:s_next_batch})
+
+                a_main, = sess.run([params.agent.A_main],{params.agent.main_head:s_next_batch_head,params.agent.main_history:s_next_batch_history})
+                q_object, = sess.run([params.agent.Q_object],{params.agent.object_head:s_next_batch_head,params.agent.object_history:s_next_batch_history})
                 q_object = params.gamma*q_object[range(params.batch_size),a_main]*( done_batch)
                 doubleQvalue = reward_batch+q_object
                 params.agent.main_network.scalar_step+=1
                 _,s_loss = sess.run([params.agent.updateModel,params.agent.loss]
                                     ,{params.agent.main_network.targetQ:doubleQvalue
-                                     ,params.agent.main_input:s_batch
-                                      ,params.agent.main_network.action:a_batch
-                                      ,params.agent.main_network.step:params.agent.main_network.scalar_step}
+                                    ,params.agent.main_head:s_batch_head
+                                    ,params.agent.main_history:s_batch_history
+                                    ,params.agent.main_network.action:a_batch
+                                    ,params.agent.main_network.step:params.agent.main_network.scalar_step}
                                     )
                 total_loss.append(s_loss)
         if total_step % params.update_q_freq == 0 and step>FLAGS.memory_size: #更新从Q参数
             updateTarget(sess)
         # next step
         total_reward += r
-        s = s_next
+        head = s_next_head
+        history = s_next_history
         step += 1
         total_step += 1
     return np.average(total_loss),total_reward,total_step,params.environment.profits
