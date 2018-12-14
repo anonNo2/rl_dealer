@@ -44,7 +44,7 @@ class LstmEnv(gym.Env):
         return len(self.data)-1
 
     def select(self,a):
-        self.curent_price = self.data.iloc[self.t, :]['Close']
+        self.curent_price = self.data.iloc[self.t, :]['close']
         if(self.lastSell>0):
             self.lastSell-=1
         if(self.lastbuy>0):
@@ -62,8 +62,8 @@ class LstmEnv(gym.Env):
 
     # action = 0: stay, 1: buy, 2: sell
     def step(self, action=0):
-        cur_price = self.data.iloc[self.t, :]['Close']
-        cur_volume = self.data.iloc[self.t,:] ['Volume']
+        cur_price = self.data.iloc[self.t, :]['close']
+        cur_volume = self.data.iloc[self.t,:] ['vol']
         reward = 0 #stay
         if action== 1: #buy
             if len(self.positions) >=4:
@@ -84,11 +84,11 @@ class LstmEnv(gym.Env):
                 self.profits += profit
         # set next time
         self.t += 1
-        next_close = self.data.iloc[self.t, :]['Close']
-        next_open = self.data.iloc[self.t, :]['Open']
-        next_High = self.data.iloc[self.t, :]['High']
-        next_Low = self.data.iloc[self.t, :]['Low']
-        next_Volume = self.data.iloc[self.t, :]['Volume']
+        next_close = self.data.iloc[self.t, :]['close']
+        next_open = self.data.iloc[self.t, :]['open']
+        next_High = self.data.iloc[self.t, :]['high']
+        next_Low = self.data.iloc[self.t, :]['low']
+        next_Volume = self.data.iloc[self.t, :]['vol']
         self.history.pop(0)
         cur_day = [
             (next_open /cur_price-1)*100,
@@ -107,17 +107,18 @@ class LstmEnv(gym.Env):
 
 def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
     data = pd.read_csv(params.data_path)
-    data['Date'] = pd.to_datetime(data['Date'])
-    data = data.set_index('Date')
+    data['trade_date'] = pd.to_datetime(data['trade_date'],format='%Y%m%d')
+    data = data.set_index('trade_date')
+    data = data.sort_index()
     print(data.index.min(), data.index.max())
     data.head()
-    date_split = '2014-01-01'
+    date_split = '2015-12-18'
     train = data[:date_split]
     test = data[date_split:]
     if(mode == tf.estimator.ModeKeys.TRAIN):
-        return LstmEnv(train,params.history_size)
+        return LstmEnv(data,params.history_size)
     else:
-        return LstmEnv(test,params.history_size)
+        return LstmEnv(data,params.history_size)
 
 
 #import matplotlib.pyplot as plt

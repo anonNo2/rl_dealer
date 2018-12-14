@@ -67,7 +67,7 @@ class action():
     def __init__(self):
         self.epsilon = 1.0
         self.epsilon_decrease = 3e-5
-        self.epsilon_min = 0.2
+        self.epsilon_min = 0.05
         self.start_reduce_epsilon = 200
 
 

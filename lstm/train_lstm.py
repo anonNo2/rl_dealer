@@ -10,10 +10,10 @@ from lstm.env_lstm import get_env
 from lstm.evaluate_lstm import evaluation
 from lstm.network_lstm import model
 
-tf.app.flags.DEFINE_integer("history_size",35,"")
+tf.app.flags.DEFINE_integer("history_size",90,"")
 #goog.us.txt
-tf.app.flags.DEFINE_string("data_path","data/Stocks/msfg.us.txt","")
-tf.app.flags.DEFINE_integer("epoch_num",100,"")
+tf.app.flags.DEFINE_string("data_path","../china_stock/000002.SZ.csv","")
+tf.app.flags.DEFINE_integer("epoch_num",60,"")
 tf.app.flags.DEFINE_integer("memory_size",100,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
 tf.app.flags.DEFINE_string("model_dir","model","")
@@ -129,7 +129,7 @@ def main(_):
                 start = time.time()
 
                 saver.save(sess,FLAGS.model_dir+'\model-'+str(epoch+1)+'.ckpt')
-                eval.eval_pic()
+                eval.eval()
 
 
 
