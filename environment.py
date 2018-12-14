@@ -5,10 +5,10 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import gym
 import tensorflow as tf
 
-from plotly import tools
-from plotly.graph_objs import *
-from plotly.offline import init_notebook_mode, iplot, iplot_mpl
-init_notebook_mode()
+#from plotly import tools
+#from plotly.graph_objs import *
+#from plotly.offline import init_notebook_mode, iplot, iplot_mpl
+#init_notebook_mode()
 #
 # def sigmoid(x):
 #     s = 1 / (1 + np.exp(-x))
@@ -83,23 +83,33 @@ def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
         return env(test,params.history_size)
 
 
-#import matplotlib.pyplot as plt
-def main(_):
-    data = pd.read_csv("data/Stocks/goog.us.txt")
-    data['Date'] = pd.to_datetime(data['Date'])
-    data = data.set_index('Date')
-    print(data.index.min(), data.index.max())
-    data.head()
-    date_split = '2016-01-01'
-    train = data[:date_split]
-    test = data[date_split:]
+import matplotlib.pyplot as plt
 
-    cur_price = test.iloc[range(0,100), :]['Close']
-    #plt.plot(cur_price)
+def main(_):
+   # print ("hello,world")
+   # data = pd.read_csv("data/Stocks/goog.us.txt")
+   # data['Date'] = pd.to_datetime(data['Date'])
+   # data = data.set_index('Date')
+   # print(data.index.min(), data.index.max())
+   # data.head()
+   # date_split = '2016-01-01'
+   # train = data[:date_split]
+   # test = data[date_split:]
+   #
+   # cur_price = test.iloc[range(0,100), :]['Close']
+   # plt.plot(cur_price)
+   #plt.plot([1,2,3,4],[1,4,9,16],'ro')
+   #plt.plot([1,2,3,4],[1,4,9,16],'b-')
+   t=np.arange(0.,5.,0.2)
+   #ro 红点， b- 蓝色连续线， r-- 缸线， bs 蓝色的方块， g^ 绿色的三角
+   line1,line2 = plt.plot(t,t,'r--',t,t**2,'bs',t,t**3,'g^')
+
+   plt.show()
 
 
 if __name__=="__main__":
-    tf.app.run(main)
+   main(None)
+
 
 
 

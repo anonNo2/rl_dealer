@@ -1,6 +1,7 @@
 import os
 import time
-
+import sys
+sys.path.insert(0, "D:\\github projects\\linsu07\\rl_dealer\\")
 import tensorflow as tf
 import numpy as np
 
@@ -9,10 +10,10 @@ from lstm.env_lstm import get_env
 from lstm.evaluate_lstm import evaluation
 from lstm.network_lstm import model
 
-tf.app.flags.DEFINE_integer("history_size",35,"")
+tf.app.flags.DEFINE_integer("history_size",90,"")
 #goog.us.txt
-tf.app.flags.DEFINE_string("data_path","data/Stocks/goog.us.txt","")
-tf.app.flags.DEFINE_integer("epoch_num",100,"")
+tf.app.flags.DEFINE_string("data_path","../china_stock/000002.SZ.csv","")
+tf.app.flags.DEFINE_integer("epoch_num",60,"")
 tf.app.flags.DEFINE_integer("memory_size",100,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
 tf.app.flags.DEFINE_string("model_dir","model","")
@@ -91,10 +92,10 @@ def main(_):
     FLAGS.act = action()
 
     FLAGS.step_max = FLAGS.environment.data_len()
-    FLAGS.train_freq = 40
-    FLAGS.update_q_freq = 50
+    FLAGS.train_freq = 80
+    FLAGS.update_q_freq = 100
     FLAGS.gamma = 0.97
-    FLAGS.show_log_freq = 5
+    FLAGS.show_log_freq = 3
     FLAGS.memory = []#Experience(FLAGS.memory_size)
 
     init = tf.global_variables_initializer()
