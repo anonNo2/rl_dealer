@@ -5,7 +5,7 @@ sys.path.insert(0, "D:\\github projects\\linsu07\\rl_dealer\\")
 import tensorflow as tf
 import numpy as np
 
-from lstm.agent import action
+from lstm.Action import action
 from lstm.env_lstm import get_env
 from lstm.evaluate_lstm import evaluation
 from lstm.network_lstm import model
@@ -17,6 +17,7 @@ tf.app.flags.DEFINE_integer("epoch_num",60,"")
 tf.app.flags.DEFINE_integer("memory_size",100,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
 tf.app.flags.DEFINE_string("model_dir","model","")
+tf.app.flags.DEFINE_integer("head_size",3,"")
 
 FLAGS =  tf.app.flags.FLAGS
 
@@ -35,7 +36,7 @@ def main(_):
             print('Loading Model...')
             #'model-33.ckpt'
             #saver.restore(sess,ckpt.model_checkpoint_path)
-            saver.restore(sess,"model\\model-30.ckpt")
+            saver.restore(sess,"model\\model-6.ckpt")
 
             eval.eval_pic()
 

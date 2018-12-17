@@ -24,22 +24,33 @@ class evaluation():
         stay_list = []
         total_reward = 0
         while step <max_steps-1:
-            head_reshape = (np.array(head, dtype=np.float32).reshape(1, -1))
-            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,5))
-            a, =sess.run([params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
-            a = self.env.select(a[0])
+            if step<params.history_size:
+                head,history,_,_ = self.env.step(0)
+                step+=1
+                continue
+
+
+            head_reshape = (np.array(head, dtype=np.float32).reshape(1, params.head_size))
+            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,8))
+            a, =sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+            a = a[0]
+            is_buy = a==1 and self.env.positions==0
+            is_sell =  a==1 and  self.env.positions==1
+            s_next_head,s_next_history,r,_ = self.env.step(a)
             cur_price = self.env.curent_price
-            s_next_head,s_next_history,r,done = self.env.step(a)
-            total_reward += r
-            if a==1:
+
+            if is_buy:
                 buy_step_list.append(step)
                 buy_list.append(cur_price)
-            elif a==2:
+            if is_sell:
                 sell_step_list.append(step)
                 sell_list.append(cur_price)
 
             stay_step_list.append(step)
             stay_list.append(cur_price)
+
+            print ("step {}, reword {},a {}".format(step,r,a))
+            total_reward += r
             head = s_next_head
             history = s_next_history
             step += 1
@@ -59,31 +70,28 @@ class evaluation():
         total_loss =[]
         #print ("eval env length is {}".format(len(self.env.data)))
         memory = []
-        reward_list = []
         max_steps = self.env.data_len()
         while step <max_steps-1:
-            head_reshape = (np.array(head, dtype=np.float32).reshape(1, -1))
-            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,5))
-            a, =sess.run([params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
-            a = self.env.select(a[0])
+            if step <params.history_size:
+                head,history,_,_ =self.env.step(0)
+                step+=1
+                continue
+
+            head_reshape = (np.array(head, dtype=np.float32).reshape(1, params.head_size))
+            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,8))
+            a, =sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+            a = a[0]
             s_next_head,s_next_history,r,done = self.env.step(a)
             memory.append((head,history,a,r,s_next_head,s_next_history,done))
             # next step
             total_reward += r
-            cmd = "stay"
-            if a==1:
-                cmd = "buy"
-            elif a==2:
-                cmd = "sell"
-            reward_list.append(cmd+":{}".format(r))
             head = s_next_head
             history = s_next_history
             step += 1
-            if len(memory) < 50 :
+
+            if len(memory)<params.memory_size:
                 continue
-            if step<60:
-                memory.clear()
-                continue
+
             shuffled_memory = np.random.permutation(memory)
             memory_idx = range(len(shuffled_memory))
             for i in memory_idx[::params.batch_size]:
@@ -105,8 +113,6 @@ class evaluation():
                                        ,params.agent.main_history:s_batch_history
                                         ,params.agent.main_network.action:a_batch}
                                     )
-                total_loss.append(s_loss)
-                memory.clear()
-
+            total_loss.append(s_loss)
+            memory=[]
         print("eval:\t"+'\t'.join(map(str, ["reward:",total_reward,"loss", np.average(total_loss),"porfits",self.env.profits])))
-        #print ("reward history is {}".format(reward_list))
