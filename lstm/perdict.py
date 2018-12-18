@@ -12,7 +12,8 @@ from lstm.network_lstm import model
 
 tf.app.flags.DEFINE_integer("history_size",60,"")
 #goog.us.txt
-tf.app.flags.DEFINE_string("data_path","../china_stock/000002.SZ.csv","")
+tf.app.flags.DEFINE_string("data_path","../eval_data","")
+#tf.app.flags.DEFINE_string("data_path","../china_stock","")
 tf.app.flags.DEFINE_integer("epoch_num",60,"")
 tf.app.flags.DEFINE_integer("memory_size",100,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
@@ -36,7 +37,7 @@ def main(_):
             print('Loading Model...')
             #'model-33.ckpt'
             #saver.restore(sess,ckpt.model_checkpoint_path)
-            saver.restore(sess,"model\\model-6.ckpt")
+            saver.restore(sess,"model\\model-8.ckpt")
 
             eval.eval_pic()
 

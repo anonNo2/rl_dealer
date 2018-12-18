@@ -1,12 +1,12 @@
 import tensorflow as tf
 
-from lstm.env_lstm import get_env
+from lstm.environment import get_env
 import numpy as np
 import matplotlib.pyplot as plt
 
 class evaluation():
-    def __init__(self,params,sess):
-        self.env = get_env(params,tf.estimator.ModeKeys.EVAL)
+    def __init__(self,params,sess=None):
+        self.env = get_env(params ,mode = tf.estimator.ModeKeys.EVAL)
         self.params = params
         self.sess = sess
 
@@ -14,6 +14,7 @@ class evaluation():
         params = self.params
         sess = self.sess
         head,history = self.env.reset()
+        print(" in eval_pic")
         max_steps = self.env.data_len()
         step = 0
         buy_step_list =[]
@@ -31,11 +32,18 @@ class evaluation():
 
 
             head_reshape = (np.array(head, dtype=np.float32).reshape(1, params.head_size))
-            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,8))
-            a, =sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,6))
+            a,q =sess.run([params.agent.A_main,params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
             a = a[0]
+            if self.env.isOutRange():
+                a = 1
+            q = q[0]
+            # prob = np.exp(q[1])/(np.exp(q[1])+np.exp(q[0]))
+            #
+            # a = 1 if prob>0.6 else 0
             is_buy = a==1 and self.env.positions==0
             is_sell =  a==1 and  self.env.positions==1
+
             s_next_head,s_next_history,r,_ = self.env.step(a)
             cur_price = self.env.curent_price
 
@@ -48,8 +56,13 @@ class evaluation():
 
             stay_step_list.append(step)
             stay_list.append(cur_price)
-
-            print ("step {}, reword {},a {}".format(step,r,a))
+            if is_buy:
+                action = "buy"
+            elif is_sell:
+                action = "sell"
+            else:
+                action = "stay"
+            print ("step {}, reword {},action {}, stay = {}, act = {}".format(step,r,action,q[0],q[1]))
             total_reward += r
             head = s_next_head
             history = s_next_history
@@ -65,6 +78,7 @@ class evaluation():
         params = self.params
         sess = self.sess
         head,history = self.env.reset()
+        #print("in eval")
         step = 0
         total_reward = 0
         total_loss =[]
@@ -78,9 +92,11 @@ class evaluation():
                 continue
 
             head_reshape = (np.array(head, dtype=np.float32).reshape(1, params.head_size))
-            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,8))
+            history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,6))
             a, =sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
             a = a[0]
+            if params.environment.isOutRange():
+                a = 1
             s_next_head,s_next_history,r,done = self.env.step(a)
             memory.append((head,history,a,r,s_next_head,s_next_history,done))
             # next step

@@ -7,13 +7,13 @@ import tensorflow as tf
 import numpy as np
 
 from lstm.Action import action
-from lstm.env_lstm import get_env
+from lstm.environment import get_env
 from lstm.evaluate_lstm import evaluation
 from lstm.network_lstm import model
 
-tf.app.flags.DEFINE_integer("history_size",65,"")
+tf.app.flags.DEFINE_integer("history_size",60,"")
 #goog.us.txt
-tf.app.flags.DEFINE_string("data_path","../china_stock/000002.SZ.csv","")
+tf.app.flags.DEFINE_string("data_path","../china_stock","")
 tf.app.flags.DEFINE_integer("epoch_num",60,"")
 tf.app.flags.DEFINE_integer("memory_size",100,"")
 tf.app.flags.DEFINE_integer("batch_size",50,"")
@@ -51,15 +51,19 @@ def updateTarget(sess):
 
 def run_epch(params,sess,total_step):
     head,history = params.environment.reset()
+    #print ("in run_epch")
     step = 0
     total_reward = 0
+    params.step_max = params.environment.data_len()
     total_loss =[]
     while step < params.step_max:
         head_reshape = (np.array(head, dtype=np.float32).reshape(1,params.head_size))
-        history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,8))
+        history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,6))
         a = sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
         a = a[0]
         a = params.act.get_action(total_step,a,params.environment)
+        if params.environment.isOutRange():
+            a = 1
         s_next_head,s_next_history,r,done = params.environment.step(a)
 
         params.memory.append((head,history,a,r,s_next_head,s_next_history,done))
@@ -72,7 +76,7 @@ def run_epch(params,sess,total_step):
                 batch = np.array(shuffled_memory[i:i+params.batch_size])
                 s_batch_head =np.array( batch[:, 0].tolist(), dtype=np.float32)
                 s_batch_history = np.array( batch[:, 1].tolist(), dtype=np.float32)
-                a_batch = np.array(batch[:, 2].tolist(), dtype=np.int32)
+                a_batch = np.array(batch[:, 2].tolist(), dtype=np.int32).reshape(50)
                 reward_batch = np.array(batch[:, 3].tolist(), dtype=np.int32)
                 s_next_batch_head = np.array(batch[:, 4].tolist(), dtype=np.float32)#.reshape(params.batch_size, -1)
                 s_next_batch_history = np.array(batch[:, 5].tolist(), dtype=np.float32)
@@ -105,14 +109,14 @@ def run_epch(params,sess,total_step):
 
 def main(_):
     FLAGS.agent = model(params=FLAGS)
-    FLAGS.environment  = get_env(FLAGS)
+    FLAGS.environment  = get_env(FLAGS.data_path)
     FLAGS.act = action()
 
-    FLAGS.step_max = FLAGS.environment.data_len()
     FLAGS.train_freq = 80
     FLAGS.update_q_freq = 40
-    FLAGS.gamma =1 #0.99#0.99# it should be episode situation
-    FLAGS.show_log_freq = 3
+    #越大越倾向持股待涨，但是遇到大跌会套里，越小交易的越碎，肯定能逃过大跌
+    FLAGS.gamma =0.97#0.93 0.99# it should be episode situation  // 从当前位置能看得长远啊
+    FLAGS.show_log_freq = 4
     FLAGS.memory = []#Experience(FLAGS.memory_size)
 
     init = tf.global_variables_initializer()
@@ -130,7 +134,7 @@ def main(_):
         if ckpt:
             print('Loading Model...')
             saver.restore(sess,ckpt.model_checkpoint_path)
-            FLAGS.act.epsilon=0.5
+            FLAGS.act.epsilon=0.1
 
         total_step = 1
         print('\t'.join(map(str, ["epoch", "epsilon", "total_step", "rewardPerEpoch", "profits", "lossPerBatch", "elapsed_time"])))

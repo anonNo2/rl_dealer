@@ -1,46 +1,49 @@
-import random
-
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import gym
 import tensorflow as tf
-
-#
-#用lstm，成功的用profit当reword，profit就是当天涨跌的百分比，傻agent倾向跌了不卖，
-#必须逼迫它！
-def get_env(params,mode = tf.estimator.ModeKeys.TRAIN):
-    data = pd.read_csv(params.data_path)
-    data['trade_date'] = pd.to_datetime(data['trade_date'],format='%Y%m%d')
-    data = data.set_index('trade_date')
-    data = data.sort_index()
-    vol = data['vol']
-    dividee = vol.max() - vol.min()
-    data['vol_norm'] = (vol - vol.min()) /dividee
-    data['5_ema'] = data["close"].ewm(adjust=True,ignore_na=False,span=5,min_periods=0).mean()
-    data['10_ema'] = data["close"].ewm(adjust=True,ignore_na=False,span=10,min_periods=0).mean()
-    data['30_ema'] =data["close"].ewm(adjust=True,ignore_na=False,span=30,min_periods=0).mean()
-    data['60_ema'] = data["close"].ewm(adjust=True,ignore_na=False,span=60,min_periods=0).mean()
-    #data["close"].data["close"].ewm(adjust=True,ignore_na=False,span=60,min_periods=0).mean()
-    print(data.index.min(), data.index.max())
-    data.head()
-    date_split = '2016-12-18'
-    train = data[:date_split]
-    test = data[date_split:]
-    if(mode == tf.estimator.ModeKeys.TRAIN):
-        return LstmEnv(data,params.history_size)
-    else:
-        return LstmEnv(test,params.history_size,tf.estimator.ModeKeys.EVAL)
+import random
+def get_env(data_path,mode = tf.estimator.ModeKeys.TRAIN):
+    if(mode ==tf.estimator.ModeKeys.EVAL):
+        return LstmEnv("../eval_data",history_t = 60,mode = tf.estimator.ModeKeys.EVAL)
+    return LstmEnv(data_path,history_t = 60,mode = mode)
+import os
 
 class LstmEnv(gym.Env):
-    def __init__(self,data,history_t = 60,mode = tf.estimator.ModeKeys.TRAIN):
-        self.data = data
+    def __init__(self,data_path,history_t = 60,mode = tf.estimator.ModeKeys.TRAIN):
+        list = os.listdir(data_path) #列出文件夹下所有的目录与文件
+        self.file_list = []
+        for i in range(0,len(list)):
+            path = os.path.join(data_path,list[i])
+            if os.path.isfile(path) and path.endswith("csv"):
+                self.file_list.append(path)
         self.history_t = history_t
         self.rewards = []
-        self.reset()
+        #self.reset(mode = 0)
         self.mode = mode
 
-
-    def reset(self):
+    def get_data(self):
+        y=list(range(len(self.file_list)))
+        index = random.sample(y, 1)
+        file =self.file_list[index[0]]
+        print ("use file {} as input".format(file))
+        data = pd.read_csv(file)
+        data['trade_date'] = pd.to_datetime(data['trade_date'],format='%Y%m%d')
+        data = data.set_index('trade_date')
+        data = data.sort_index()
+        vol = data['vol']
+        dividee = vol.max() - vol.min()
+        data['vol_norm'] = (vol - vol.min()) /dividee
+        data['5_ema'] = data["close"].ewm(adjust=True,ignore_na=False,span=5,min_periods=0).mean()
+        data['10_ema'] = data["close"].ewm(adjust=True,ignore_na=False,span=10,min_periods=0).mean()
+        data['30_ema'] =data["close"].ewm(adjust=True,ignore_na=False,span=30,min_periods=0).mean()
+        data['60_ema'] = data["close"].ewm(adjust=True,ignore_na=False,span=60,min_periods=0).mean()
+        return data
+    def reset(self,mode=1):
+        # if mode==0:
+        #     self.data = None
+        # else:
+        self.data = self.get_data()
         self.t = 0
         self.profits = 0
         self.curent_price = 0
@@ -50,7 +53,7 @@ class LstmEnv(gym.Env):
         self.buy_price =0.0
 
         if(len(self.rewards)>0) and self.mode == tf.estimator.ModeKeys.EVAL:
-            print("avg reword per epoch is {}".format(np.average(self.rewards)))
+            #print("avg reword per epoch is {}".format(np.average(self.rewards)))
             self.rewards = []
 
 
@@ -63,13 +66,12 @@ class LstmEnv(gym.Env):
         return len(self.data)-1
 
     def isOutRange(self):
-        if(len(self.positions)>0):
-            cur_price = self.data.iloc[self.t, :]['close']
-            bj = float(cur_price/self.positions[0])
-            if bj<0.7:
-                return True
-        else:
-            return False
+        # if(self.positions==1):
+        #     self.curent_price = self.data.iloc[self.t, :]['close']
+        #     netPnL = ((self.curent_price/self.buy_price)-1)*100
+        #     if(netPnL>7):
+        #         return True
+        return False
 
     # action = 0: stay, 1: buy or sell
     def step(self, action=0):
@@ -83,12 +85,13 @@ class LstmEnv(gym.Env):
             # reward+=-0.001
             if self.positions==1:
                 self.in_position_step+=1
+                # reword值越大越倾向持股待涨，但是遇到大跌会套里，越小交易的越碎，肯定能逃过大跌
                 delta = (ema5_current-ema5_last)/ema5_current
-                reward +=  delta * 1.28#0 if np.abs(delta)<0.01 else np.tanh(delta*0.2)  #0.2-0.23???
+                reward +=  delta * 2.5#0 if np.abs(delta)<0.01 else np.tanh(delta*0.2)  #0.2-0.23???
 
             else:
                 delta = (ema5_last-ema5_current)/ema5_current
-                reward += delta * 1.28# if np.abs(delta)<0.01 else np.tanh(delta*0.2)
+                reward += delta * 2.5# if np.abs(delta)<0.01 else np.tanh(delta*0.2)
 
 
         elif action== 1: #buy or sell
@@ -96,12 +99,12 @@ class LstmEnv(gym.Env):
                 self.buy_price = self.curent_price
                 self.positions = 1
                 #self.done = True
-                #reward+=-0.1
+                reward+=-0.9
             else :#sell
                 profit = (self.curent_price/self.buy_price-1)*100
                 if self.mode == tf.estimator.ModeKeys.EVAL:
                     print ("buy at {}, sell at {}, profit {}".format(self.buy_price,self.curent_price,profit))
-                reward = 2.14*np.tanh(profit/10)
+                reward = 0#2.14*np.tanh(profit/10)
 
                 self.profits += profit
                 #self.done = True
@@ -141,7 +144,7 @@ class LstmEnv(gym.Env):
             (ema60 /ema60_p-1)*100,
             #(next_Volume/cur_volume-1)
             next_Volume
-            ]
+        ]
 
         self.history.append(cur_day)
         netPnL = 0
