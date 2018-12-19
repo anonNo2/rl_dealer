@@ -25,6 +25,7 @@ class QLstmNetwork(Layer):
         self.cell = tf.nn.rnn_cell.LSTMCell(num_units=self.hidden_size
                                             #,use_peepholes=True
                                             ,initializer=xavier_initializer())
+
         self.fc3 = Dense(half_hidden_size,activation=tf.nn.relu,kernel_initializer=xavier_initializer(),name = "fc3",trainable=self.trainable)
         self.fc4 = Dense(half_hidden_size,activation=tf.nn.relu,kernel_initializer=xavier_initializer(),name = "fc4",trainable=self.trainable)
 
@@ -44,7 +45,8 @@ class QLstmNetwork(Layer):
         history = kwargs.get("history")
 
         batch_size= tf.shape(history)[0]
-        #history = tf.reshape(batch_size,self.history_size/3,3*6) # 3天为一组。
+        #shape = [batch_size,int(self.history_size/3),3*6]
+        #history = tf.reshape(history,shape) # 3天为一组。
         init_state = self.cell.zero_state(batch_size,dtype=tf.float32)
         result = tf.nn.dynamic_rnn(self.cell,history,initial_state=init_state)
         state = tf.concat(result[1],axis=-1)

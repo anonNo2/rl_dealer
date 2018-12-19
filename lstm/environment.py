@@ -27,7 +27,9 @@ class LstmEnv(gym.Env):
         index = random.sample(y, 1)
         file =self.file_list[index[0]]
         print ("use file {} as input".format(file))
-        data = pd.read_csv(file)
+        #data = pd.read_csv(file)
+        #data = pd.read_csv("../china_stock/000858_1.SZ.csv")
+        data = pd.read_csv("../eval_data/000002.SZ.csv")
         data['trade_date'] = pd.to_datetime(data['trade_date'],format='%Y%m%d')
         data = data.set_index('trade_date')
         data = data.sort_index()
@@ -75,13 +77,17 @@ class LstmEnv(gym.Env):
         return False
 
     def inblock(self):
-        #return False
-        if self.in_position_step>0 and self.in_position_step<=3:
-            return True
-        else:
-            return False
+        if(self.positions==1):
+            # self.curent_price = self.data.iloc[self.t, :]['close']
+            # netPnL = ((self.curent_price/self.buy_price)-1)*100
+            # if(netPnL<2)and netPnL>-1:
+            #     return True
+            if self.in_position_step>0 and self.in_position_step<=3:
+                return True
+            else:
+                return False
     # action = 0: stay, 1: buy or sell
-    def step(self, action=0):
+    def step(self, action=0,confidence = 0):
         ema5_current = self.data.iloc[self.t, :]['5_ema']
         ema5_last = self.data.iloc[0 if self.t==0 else self.t-1, :]['5_ema']
         self.curent_price = self.data.iloc[self.t, :]['close']
@@ -92,7 +98,6 @@ class LstmEnv(gym.Env):
             # reward+=-0.001
             if self.positions==1:
                 self.in_position_step+=1
-                # reword值越大越倾向持股待涨，但是遇到大跌会套里，越小交易的越碎，肯定能逃过大跌
                 delta = (ema5_current-ema5_last)/ema5_current
                 reward +=  delta * 3#0 if np.abs(delta)<0.01 else np.tanh(delta*0.2)  #0.2-0.23???
 
@@ -105,12 +110,14 @@ class LstmEnv(gym.Env):
             if self.positions==0: #buy
                 self.buy_price = self.curent_price
                 self.positions = 1
+                if self.mode == tf.estimator.ModeKeys.EVAL:
+                    print ("buy at {}, price {},confident = {}".format(self.t,self.curent_price,confidence))
                 #self.done = True
                 #reward+=-0.9
             else :#sell
                 profit = (self.curent_price/self.buy_price-1)*100
                 if self.mode == tf.estimator.ModeKeys.EVAL:
-                    print ("buy at {}, sell at {}, profit {}".format(self.buy_price,self.curent_price,profit))
+                    print ("sell at {}, price {}, profit {},confident = {}".format(self.t,self.curent_price,profit,confidence))
                 reward = 0#2.14*np.tanh(profit/10)
 
                 self.profits += profit

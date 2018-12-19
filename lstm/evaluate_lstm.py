@@ -35,24 +35,35 @@ class evaluation():
             head_reshape = (np.array(head, dtype=np.float32).reshape(1, params.head_size))
             history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,6))
             a,q =sess.run([params.agent.A_main,params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+
             a = a[0]
+            q = q[0]
+            confidence =np.exp(q[a])/(np.exp(q[0])+np.exp(q[1]))
+
+            is_sell =  a==1 and  self.env.positions==1
+            if is_sell and confidence<0.51:
+                a = 0 # 不卖了
+
+            is_buy = a==1 and self.env.positions==0
+            if is_buy and confidence<0.51:
+                a = 0 #不买了
 
             if self.env.inblock():
                 a = 0
-                print ("in block")
+                #print ("in block")
 
             if self.env.isOutRange():
                 a = 1
-                print ("in isOutRange")
+                #print ("in isOutRange")
 
-            q = q[0]
-            # prob = np.exp(q[1])/(np.exp(q[1])+np.exp(q[0]))
-            #
-            # a = 1 if prob>0.6 else 0
+
+
             is_buy = a==1 and self.env.positions==0
             is_sell =  a==1 and  self.env.positions==1
 
-            s_next_head,s_next_history,r,_ = self.env.step(a)
+
+
+            s_next_head,s_next_history,r,_ = self.env.step(a,confidence)
             cur_price = self.env.curent_price
 
             if is_buy:
@@ -101,18 +112,20 @@ class evaluation():
 
             head_reshape = (np.array(head, dtype=np.float32).reshape(1, params.head_size))
             history_reshape = (np.array(history, dtype=np.float32).reshape(1, params.history_size,6))
-            a, =sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
+            a,q =sess.run([params.agent.A_main,params.agent.Q_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
             a = a[0]
+            q = q[0]
+
 
             if self.env.inblock():
                 a = 0
-                print ("in block")
+                #print ("in block")
             if self.env.isOutRange():
                 a = 1
-                print ("in isOutRange")
+                #print ("in isOutRange")
 
-
-            s_next_head,s_next_history,r,done = self.env.step(a)
+            confidence =np.exp(q[a])/(np.exp(q[0])+np.exp(q[1]))
+            s_next_head,s_next_history,r,done = self.env.step(a,confidence)
             # memory.append((head,history,a,r,s_next_head,s_next_history,done))
             # next step
             total_reward += r
