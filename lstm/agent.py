@@ -38,9 +38,13 @@ class QLstmNetwork(Layer):
         self.buy_hold = Dense(self.action_space_size,activation=None,kernel_initializer=xavier_initializer(),name = "Q",trainable=self.trainable)
         self.sell_hold = Dense(self.action_space_size,activation=None,kernel_initializer=xavier_initializer(),name = "Q",trainable=self.trainable)
 
+
+
     def call(self, head, **kwargs):
         history = kwargs.get("history")
+
         batch_size= tf.shape(history)[0]
+        #history = tf.reshape(batch_size,self.history_size/3,3*6) # 3天为一组。
         init_state = self.cell.zero_state(batch_size,dtype=tf.float32)
         result = tf.nn.dynamic_rnn(self.cell,history,initial_state=init_state)
         state = tf.concat(result[1],axis=-1)

@@ -7,9 +7,9 @@ import datetime
 token = "c23bed479c6639f4ff2ca4a6384fbd3c9595a6c7bb70e815a1b7346d"
 
 pro = ts.pro_api(token)
-df = pro.daily(ts_code='000651.SZ', start_date='20060701', end_date='20181218')
+df = pro.daily(ts_code='000002.SZ', start_date='20160920', end_date='20181218')
 
-filename = "geli000651.SZ.csv"
+filename = "000002.SZ.csv"
 if os.path.exists(filename):
     df.to_csv(filename, mode='a', header=None)
 else:

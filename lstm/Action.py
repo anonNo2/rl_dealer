@@ -3,7 +3,7 @@ import numpy as np
 
 class action():
     def __init__(self):
-        self.epsilon = 1.0
+        self.epsilon = 0.5
         self.epsilon_decrease = 1e-4
         self.epsilon_min = 0.1
         self.start_reduce_epsilon = 200

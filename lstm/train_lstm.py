@@ -62,6 +62,8 @@ def run_epch(params,sess,total_step):
         a = sess.run([params.agent.A_main],{params.agent.main_head:head_reshape,params.agent.main_history:history_reshape})
         a = a[0]
         a = params.act.get_action(total_step,a,params.environment)
+        if params.environment.inblock():
+            a = 0
         if params.environment.isOutRange():
             a = 1
         s_next_head,s_next_history,r,done = params.environment.step(a)
@@ -115,7 +117,10 @@ def main(_):
     FLAGS.train_freq = 80
     FLAGS.update_q_freq = 40
     #越大越倾向持股待涨，但是遇到大跌会套里，越小交易的越碎，肯定能逃过大跌
-    FLAGS.gamma =0.97#0.93 0.99# it should be episode situation  // 从当前位置能看得长远啊
+    #用了0.97 反而看得更长远了，交易反而更小，更碎了。也可以躲过大跌了！！ funny
+    #0.965 是good 25%
+
+    FLAGS.gamma =0.96
     FLAGS.show_log_freq = 4
     FLAGS.memory = []#Experience(FLAGS.memory_size)
 
@@ -134,7 +139,7 @@ def main(_):
         if ckpt:
             print('Loading Model...')
             saver.restore(sess,ckpt.model_checkpoint_path)
-            FLAGS.act.epsilon=0.1
+            #FLAGS.act.epsilon=0.1
 
         total_step = 1
         print('\t'.join(map(str, ["epoch", "epsilon", "total_step", "rewardPerEpoch", "profits", "lossPerBatch", "elapsed_time"])))

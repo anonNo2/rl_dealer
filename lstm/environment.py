@@ -66,13 +66,20 @@ class LstmEnv(gym.Env):
         return len(self.data)-1
 
     def isOutRange(self):
-        # if(self.positions==1):
-        #     self.curent_price = self.data.iloc[self.t, :]['close']
-        #     netPnL = ((self.curent_price/self.buy_price)-1)*100
-        #     if(netPnL>7):
-        #         return True
+        #return False
+        if(self.positions==1):
+            self.curent_price = self.data.iloc[self.t, :]['close']
+            netPnL = ((self.curent_price/self.buy_price)-1)*100
+            if(netPnL<-7):
+                return True
         return False
 
+    def inblock(self):
+        #return False
+        if self.in_position_step>0 and self.in_position_step<=3:
+            return True
+        else:
+            return False
     # action = 0: stay, 1: buy or sell
     def step(self, action=0):
         ema5_current = self.data.iloc[self.t, :]['5_ema']
@@ -87,11 +94,11 @@ class LstmEnv(gym.Env):
                 self.in_position_step+=1
                 # reword值越大越倾向持股待涨，但是遇到大跌会套里，越小交易的越碎，肯定能逃过大跌
                 delta = (ema5_current-ema5_last)/ema5_current
-                reward +=  delta * 2.5#0 if np.abs(delta)<0.01 else np.tanh(delta*0.2)  #0.2-0.23???
+                reward +=  delta * 3#0 if np.abs(delta)<0.01 else np.tanh(delta*0.2)  #0.2-0.23???
 
             else:
                 delta = (ema5_last-ema5_current)/ema5_current
-                reward += delta * 2.5# if np.abs(delta)<0.01 else np.tanh(delta*0.2)
+                reward += delta * 3# if np.abs(delta)<0.01 else np.tanh(delta*0.2)
 
 
         elif action== 1: #buy or sell
@@ -99,7 +106,7 @@ class LstmEnv(gym.Env):
                 self.buy_price = self.curent_price
                 self.positions = 1
                 #self.done = True
-                reward+=-0.9
+                #reward+=-0.9
             else :#sell
                 profit = (self.curent_price/self.buy_price-1)*100
                 if self.mode == tf.estimator.ModeKeys.EVAL:

@@ -37,7 +37,7 @@ def main(_):
             print('Loading Model...')
             #'model-33.ckpt'
             #saver.restore(sess,ckpt.model_checkpoint_path)
-            saver.restore(sess,"model\\model-8.ckpt")
+            saver.restore(sess,"model\\model-40.ckpt")
 
             eval.eval_pic()
 
