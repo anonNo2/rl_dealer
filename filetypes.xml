@@ -3,6 +3,7 @@
     <extensionMap>
       <mapping pattern="history" type="PLAIN_TEXT" />
       <mapping pattern="法研dataframe" type="PLAIN_TEXT" />
+      <mapping ext="dat" type="PLAIN_TEXT" />
       <mapping ext="csv" type="PLAIN_TEXT" />
     </extensionMap>
   </component>
